@@ -1,0 +1,14 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: v0.2.0
+_src_path: git@github.com:datalab-org/datalab-app-plugin-template
+author_email: ''
+author_fullname: Izzy Cooley
+copyright_date: '2025'
+copyright_holder: Izzy Cooley
+copyright_holder_email: ''
+package_name: datalab_app_plugin_dsc
+project_name: datalab-app-plugin-dsc
+repository_name: datalab-app-plugin-dsc
+repository_namespace: datalab-org
+short_description: datalab-app-plugin-dsc
+
