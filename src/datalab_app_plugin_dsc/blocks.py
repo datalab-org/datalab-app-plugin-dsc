@@ -1,5 +1,15 @@
+
+"""A block that loads DSC data, generates a plot
+and stores direct DSC data and user-inputted thermodynamic parameters in the database.
+
+"""
 import os
 from pathlib import Path
+
+from pydatalab.blocks.base import DataBlock, event, generate_js_callback_single_float_parameter
+from pydatalab.bokeh_plots import DATALAB_BOKEH_THEME, selectable_axes_plot
+from pydatalab.file_utils import get_file_info_by_id
+from pydatalab.logger import LOGGER
 
 import bokeh.embed
 import numpy as np
@@ -9,25 +19,6 @@ from bokeh.models import HoverTool, LogColorMapper, DataTable, TableColumn, Arro
 from bokeh.models.widgets import Select, Button
 from bokeh.plotting import ColumnDataSource
 from bokeh.layouts import gridplot, column,row
-
-from pydatalab.blocks.base import DataBlock, event, generate_js_callback_single_float_parameter
-from pydatalab.bokeh_plots import DATALAB_BOKEH_THEME, selectable_axes_plot
-from pydatalab.file_utils import get_file_info_by_id
-from pydatalab.logger import LOGGER
-
-"""A block that loads DSC data, generates a plot
-and stores direct DSC data and user-inputted thermodynamic parameters in the database.
-
-TODO:
-
-    1. Replace this class implementation with your own.
-    2. Update the entrypoint in pyproject.toml to point to this class.
-
-"""
-
-from pathlib import Path
-
-from pydatalab.blocks.base import DataBlock
 
 from datalab_app_plugin_dsc._version import __version__
 
