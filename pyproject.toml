@@ -8,7 +8,7 @@ description = "datalab-app-plugin-dsc"
 readme = "README.md"
 keywords = []
 license = { text = "MIT" }
-authors = [{ name = "Izzy Cooley", email = "" }]
+authors = [{ name = "Izzy Cooley", email = "iz.cooley@gmail.com }]
 dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -35,6 +35,7 @@ changelog = "https://github.com/datalab-org/datalab-app-plugin-dsc/CHANGELOG.md"
 # Edit this entry point with any block classes implemented in this plugin
 [project.entry-points.'pydatalab.apps.plugins']
 example = "datalab_app_plugin_dsc.blocks:ExampleDataBlock"
+DSC = "datalab_app_plugin_dsc.blocks:DSCDataBlock"
 
 [tool.setuptools.packages.find]
 where = ["src"]
