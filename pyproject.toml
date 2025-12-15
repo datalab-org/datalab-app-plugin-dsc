@@ -8,7 +8,7 @@ description = "datalab-app-plugin-dsc"
 readme = "README.md"
 keywords = []
 license = { text = "MIT" }
-authors = [{ name = "Izzy Cooley", email = "iz.cooley@gmail.com }]
+authors = [{ name = "Izzy Cooley", email = "iz.cooley@gmail.com" }]
 dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
