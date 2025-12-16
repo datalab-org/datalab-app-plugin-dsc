@@ -34,8 +34,8 @@ changelog = "https://github.com/datalab-org/datalab-app-plugin-dsc/CHANGELOG.md"
 
 # Edit this entry point with any block classes implemented in this plugin
 [project.entry-points.'pydatalab.apps.plugins']
-example = "datalab_app_plugin_dsc.blocks:ExampleDataBlock"
 DSC = "datalab_app_plugin_dsc.blocks:DSCDataBlock"
+GPC = "datalab_app_plugin_dsc.blocks_gpc_sec:GPCDataBlock"
 
 [tool.setuptools.packages.find]
 where = ["src"]
