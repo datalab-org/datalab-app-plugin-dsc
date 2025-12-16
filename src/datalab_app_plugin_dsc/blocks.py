@@ -38,12 +38,12 @@ class DSCDataBlock(DataBlock):
 
     @event()
     def set_data(self,data,name):
-    """
-    Updates self.data with user-inputted data, or clears the entry in self.data if the input is 'clear'
-    Args:
-        data: float or comma-separated list containing the information to be added to self.data, or 'clear' to remove the data
-        name: string, the name of the variable in self.data to be updated
-    """
+        """
+        Updates self.data with user-inputted data, or clears the entry in self.data if the input is 'clear'
+        Args:
+            data: float or comma-separated list containing the information to be added to self.data, or 'clear' to remove the data
+            name: string, the name of the variable in self.data to be updated
+        """
         datalist = []
         if isinstance(data,float) or isinstance(data,int):
             datalist.append(data)
