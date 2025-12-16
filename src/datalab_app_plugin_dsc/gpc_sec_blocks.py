@@ -4,26 +4,23 @@ from pathlib import Path
 import bokeh.embed
 import numpy as np
 import pandas as pd
-
+from bokeh.layouts import gridplot
 from bokeh.models import (
-    HoverTool,
-    LogColorMapper,
-    DataTable,
-    TableColumn,
     BoxAnnotation,
     CheckboxGroup,
     CustomJS,
-    Label,
-    Range1d,
-    Span,
-    Select,
-    LinearAxis,
     DataRange1d,
+    DataTable,
+    HoverTool,
+    Label,
+    LinearAxis,
+    LogColorMapper,
+    Range1d,
+    Select,
+    Span,
+    TableColumn,
 )
 from bokeh.plotting import ColumnDataSource, figure
-from bokeh.io import show
-from bokeh.layouts import column, row, layout, gridplot
-
 from pydatalab.blocks.base import DataBlock
 from pydatalab.bokeh_plots import DATALAB_BOKEH_THEME, selectable_axes_plot
 from pydatalab.file_utils import get_file_info_by_id
@@ -97,7 +94,7 @@ class GPCBlock(DataBlock):
         for i in range(len(gpcchan)):
             dtype = gpcchan["Detector type"][i]
             units = gpcchan["Detector units"][i]
-            gpc["{0} ({1})".format(dtype, units)] = gpcraw["Response Trace {0}".format(i + 1)]
+            gpc[f"{dtype} ({units})"] = gpcraw[f"Response Trace {i + 1}"]
         # gpc = gpc.fillna(0)
 
         # Read the molecular weight results from the file
@@ -233,7 +230,7 @@ class GPCBlock(DataBlock):
         plotlayout.children[1].extra_y_ranges = {}
         for i in range(1, len(bonusymenu)):
             renderersource = ColumnDataSource(gpc_data)
-            plotlayout.children[1].extra_y_ranges["y{0}".format(i)] = DataRange1d(
+            plotlayout.children[1].extra_y_ranges[f"y{i}"] = DataRange1d(
                 renderers=[
                     plotlayout.children[1].line(
                         source=renderersource, x=list(gpc_data)[0], y=bonusymenu[i], visible=False
@@ -242,7 +239,7 @@ class GPCBlock(DataBlock):
             )
             bonusy.append(
                 LinearAxis(
-                    y_range_name="y{0}".format(i),
+                    y_range_name=f"y{i}",
                     axis_label=bonusymenu[i],
                     axis_label_text_color="red",
                     major_label_text_color="red",
@@ -253,7 +250,7 @@ class GPCBlock(DataBlock):
                 plotlayout.children[1].line(
                     gpc_data[list(gpc_data)[0]],
                     gpc_data[bonusymenu[i]],
-                    y_range_name="y{0}".format(i),
+                    y_range_name=f"y{i}",
                     color="red",
                     visible=False,
                 )
@@ -325,7 +322,7 @@ class GPCBlock(DataBlock):
                 visible=False,
             )
             flowmarklab = Label(
-                text="Flow rate marker\n{0}".format(fminfo["Name"]),
+                text="Flow rate marker\n{}".format(fminfo["Name"]),
                 x=fminfo["RT"],
                 border_line_color="black",
                 background_fill_color="white",
@@ -441,7 +438,7 @@ class GPCBlock(DataBlock):
             )
             if callims == "yes":
                 labeltext = (
-                    "Calibration curve \nName {0}\n{1}\nCalibration from {2} to {3} mins".format(
+                    "Calibration curve \nName {}\n{}\nCalibration from {} to {} mins".format(
                         calinfo["Name"],
                         calinfo["Equation"],
                         round(min(x_cal), 2),
@@ -449,7 +446,7 @@ class GPCBlock(DataBlock):
                     )
                 )
             else:
-                labeltext = "Calibration curve \nName {0}\n{1}\nWarning: limits of calibration not given in file".format(
+                labeltext = "Calibration curve \nName {}\n{}\nWarning: limits of calibration not given in file".format(
                     calinfo["Name"], calinfo["Equation"]
                 )
             label = Label(
@@ -472,7 +469,7 @@ class GPCBlock(DataBlock):
             )
             callayout.y_range = Range1d(0, 10)
             label = Label(
-                text="Calibration curve\nName {0}\n{1}\nPlotting for this functional form not currently supported".format(
+                text="Calibration curve\nName {}\n{}\nPlotting for this functional form not currently supported".format(
                     calinfo["Name"], calinfo["Equation"]
                 ),
                 border_line_color="black",
@@ -531,7 +528,7 @@ class GPCBlock(DataBlock):
         for i in range(len(gpcmw)):
             for column in gpcmw.columns[1:]:
                 print(column)
-                self.data["{0} Peak {1}".format(column, i + 1)] = float(gpcmw[column][i])
+                self.data[f"{column} Peak {i + 1}"] = float(gpcmw[column][i])
 
         if gpc_data is not None:
             fulllayout = self._format_gpc_plot(
