@@ -1,43 +1,47 @@
-
 """A block that loads DSC data, generates a plot
 and stores direct DSC data and user-inputted thermodynamic parameters in the database.
 
 """
+
 import os
 from pathlib import Path
 
+import bokeh.embed
+import pandas as pd
+from bokeh.layouts import column, row
+from bokeh.models import (
+    Arrow,
+    CheckboxGroup,
+    CustomJS,
+    DataTable,
+    Div,
+    Label,
+    NormalHead,
+    TableColumn,
+    TextInput,
+)
+from bokeh.plotting import ColumnDataSource
 from pydatalab.blocks.base import DataBlock, event, generate_js_callback_single_float_parameter
 from pydatalab.bokeh_plots import DATALAB_BOKEH_THEME, selectable_axes_plot
 from pydatalab.file_utils import get_file_info_by_id
 from pydatalab.logger import LOGGER
-
-import bokeh.embed
-import numpy as np
-import pandas as pd
-
-from bokeh.models import HoverTool, LogColorMapper, DataTable, TableColumn, Arrow, NormalHead, Label, CustomJS, TextInput, Div, CheckboxGroup
-from bokeh.models.widgets import Select, Button
-from bokeh.plotting import ColumnDataSource
-from bokeh.layouts import gridplot, column,row
 
 from datalab_app_plugin_dsc._version import __version__
 
 
 class DSCDataBlock(DataBlock):
     version = __version__
-    accepted_file_extensions = ('.txt',) # Come back to this
+    accepted_file_extensions = (".txt",)  # Come back to this
     blocktype = "dsc"
     name = "DSC"
-    description = (
-            "This block can plot heat flux DSC data from a .txt file exported from TA Instrumnets Universal Analysis 2000 software"
-    )
+    description = "This block can plot heat flux DSC data from a .txt file exported from TA Instrumnets Universal Analysis 2000 software"
 
     @property
     def plot_functions(self):
         return (self.generate_dsc_plot,)
 
     @event()
-    def set_data(self,data,name):
+    def set_data(self, data, name):
         """
         Updates self.data with user-inputted data, or clears the entry in self.data if the input is 'clear'
         Args:
@@ -45,21 +49,22 @@ class DSCDataBlock(DataBlock):
             name: string, the name of the variable in self.data to be updated
         """
         datalist = []
-        if isinstance(data,float) or isinstance(data,int):
+        if isinstance(data, float) or isinstance(data, int):
             datalist.append(data)
-        elif isinstance(data,str) and data != 'clear':
+        elif isinstance(data, str) and data != "clear":
             try:
-                data = data.split(',')
+                data = data.split(",")
                 for i in range(len(data)):
                     datalist.append(float(data[i]))
             except Exception:
-                raise ValueError(f"Invalid {name}. Must be a float, comma-separated list of floats, or 'clear' to remove data.")
+                raise ValueError(
+                    f"Invalid {name}. Must be a float, comma-separated list of floats, or 'clear' to remove data."
+                )
 
         LOGGER.debug(f"Setting {name} to {data}")
         self.data[f"{name}_list"] = datalist
-        if self.data[f"{name}_list"] == 'clear':
+        if self.data[f"{name}_list"] == "clear":
             self.data.pop([f"{name}_list"])
-
 
     @event()
     def set_Tg(self, Tg):
@@ -68,7 +73,7 @@ class DSCDataBlock(DataBlock):
         Args:
             Tg: float or comma-separated list containing the Tg data, or 'clear' to remove the data
         """
-        self.set_data(Tg, 'Tg')
+        self.set_data(Tg, "Tg")
 
     @event()
     def set_Tm(self, Tm):
@@ -77,7 +82,7 @@ class DSCDataBlock(DataBlock):
         Args:
             Tm: float or comma-separated list containing the Tm data, or 'clear' to remove the data
         """
-        self.set_data(Tm, 'Tm')
+        self.set_data(Tm, "Tm")
 
     @event()
     def set_cc(self, cc):
@@ -86,7 +91,7 @@ class DSCDataBlock(DataBlock):
         Args:
             cc: float or comma-separated list containing the cc data, or 'clear' to remove the data
         """
-        self.set_data(cc, 'cold_crystallisation_temp')
+        self.set_data(cc, "cold_crystallisation_temp")
 
     @event()
     def set_ct(self, ct):
@@ -95,7 +100,7 @@ class DSCDataBlock(DataBlock):
         Args:
             ct: float or comma-separated list containing the ct data, or 'clear' to remove the data
         """
-        self.set_data(ct, 'crystallisation_temp')
+        self.set_data(ct, "crystallisation_temp")
 
     @event()
     def set_cp(self, cp):
@@ -104,7 +109,7 @@ class DSCDataBlock(DataBlock):
         Args:
             cp: float or comma-separated list containing the cp data, or 'clear' to remove the data
         """
-        self.set_data(cp, 'crystallinity_perc')
+        self.set_data(cp, "crystallinity_perc")
 
     @event()
     def set_Hm(self, Hm):
@@ -113,7 +118,7 @@ class DSCDataBlock(DataBlock):
         Args:
             Hm: float or comma-separated list containing the Hm data, or 'clear' to remove the data
         """
-        self.set_data(Hm, 'melting_enthalpy')
+        self.set_data(Hm, "melting_enthalpy")
 
     @event()
     def set_Hcc(self, Hcc):
@@ -122,10 +127,10 @@ class DSCDataBlock(DataBlock):
         Args:
             Hcc: float or comma-separated list containing the Hcc data, or 'clear' to remove the data
         """
-        self.set_data(Hcc, 'cold_crystallisation_enthalpy')
+        self.set_data(Hcc, "cold_crystallisation_enthalpy")
 
     @classmethod
-    def parse_dsc_sheet(cls,filename: Path) -> pd.DataFrame:
+    def parse_dsc_sheet(cls, filename: Path) -> pd.DataFrame:
         """Parses DSC data in a .txt file gnerated from TA Instruments Universal Analysis Software
 
         The file consists of a header block with metadata information and a data block with signals read by the spectrometer
@@ -142,48 +147,50 @@ class DSCDataBlock(DataBlock):
         """
         # Read the text
         try:
-            with open(filename,'r') as f:
+            with open(filename) as f:
                 dscraw = f.readlines()
         except:
-            with open(filename,'r',encoding='utf-16') as f:
+            with open(filename, encoding="utf-16") as f:
                 dscraw = f.readlines()
         for line in dscraw:
-            if line.strip().split()[0] == 'Nsig':
+            if line.strip().split()[0] == "Nsig":
                 Nsig = int(line.strip().split()[1])
         # Get the number of different signals
         sigs = []
         for i in range(Nsig):
             for line in dscraw:
-                if line.strip().split()[0] == 'Sig{0}'.format(i+1):
-                    sigs.append(' '.join(line.strip().split()[1:]))
+                if line.strip().split()[0] == f"Sig{i + 1}":
+                    sigs.append(" ".join(line.strip().split()[1:]))
         # Get information on what cycles there are
         cycles = []
         for line in dscraw:
-            if line.strip().split()[0] == 'OrgMethod':
+            if line.strip().split()[0] == "OrgMethod":
                 cycles.append(line.strip().split()[1:])
         for i in range(len(cycles)):
-            cycles[i] = [cycles[i][0].replace(':',''),' '.join(cycles[i][1:])]
+            cycles[i] = [cycles[i][0].replace(":", ""), " ".join(cycles[i][1:])]
         cycles = pd.DataFrame(cycles)
-        cycles.columns=['Step','Description']
+        cycles.columns = ["Step", "Description"]
         # Get whether exothermic change is up or down
-        exo = ''
+        exo = ""
         for i in range(len(dscraw)):
-            if dscraw[i].strip().split()[0] == 'Exotherm':
+            if dscraw[i].strip().split()[0] == "Exotherm":
                 exo = dscraw[i].strip().split()[1]
         # Get the data from the cycles
         for i in range(len(dscraw)):
-            if dscraw[i].strip() == 'StartOfData':
+            if dscraw[i].strip() == "StartOfData":
                 dscstart = i
-        dscnums = dscraw[dscstart+1:]
+        dscnums = dscraw[dscstart + 1 :]
         for i in range(len(dscnums)):
             dscnums[i] = dscnums[i].strip().split()
             for j in range(len(dscnums[i])):
                 dscnums[i][j] = float(dscnums[i][j])
-        dsc = pd.DataFrame(data=dscnums,columns=sigs)
-        return dsc,sigs,cycles,exo
+        dsc = pd.DataFrame(data=dscnums, columns=sigs)
+        return dsc, sigs, cycles, exo
 
-#    @classmethod
-    def _format_dsc_plot(self, dsc_data: pd.DataFrame,sigs: list, cycleinfo: pd.DataFrame,exo:str) -> bokeh.layouts.layout:
+    #    @classmethod
+    def _format_dsc_plot(
+        self, dsc_data: pd.DataFrame, sigs: list, cycleinfo: pd.DataFrame, exo: str
+    ) -> bokeh.layouts.layout:
         """Formats DSC data for plotting in bokeh
         Args:
             dsc_data (pd.DataFrame): DSC data with columsn for the signals that were present in the .txt. file
@@ -203,25 +210,25 @@ class DSCDataBlock(DataBlock):
             discont = []
             for col in dsc_data.columns.to_list():
                 if i == 0:
-                    nextdiff = abs(dsc_data[col][i+1] - dsc_data[col][i])
+                    nextdiff = abs(dsc_data[col][i + 1] - dsc_data[col][i])
                     if nextdiff > 0.1:
-                        discont.append('yes')
+                        discont.append("yes")
                     else:
-                        discont.append('no')
-                elif i == len(dsc_data)-1:
-                    prevdiff = abs(dsc_data[col][i] - dsc_data[col][i-1])
+                        discont.append("no")
+                elif i == len(dsc_data) - 1:
+                    prevdiff = abs(dsc_data[col][i] - dsc_data[col][i - 1])
                     if prevdiff > 0.1:
-                        discont.append('yes')
+                        discont.append("yes")
                     else:
-                        discont.append('no')
+                        discont.append("no")
                 else:
-                    prevdiff = abs(dsc_data[col][i] - dsc_data[col][i-1])
-                    nextdiff = abs(dsc_data[col][i+1] - dsc_data[col][i])
+                    prevdiff = abs(dsc_data[col][i] - dsc_data[col][i - 1])
+                    nextdiff = abs(dsc_data[col][i + 1] - dsc_data[col][i])
                     if prevdiff > 0.1 and nextdiff > 0.1:
-                        discont.append('yes')
+                        discont.append("yes")
                     else:
-                        discont.append('no')
-            if all(check == 'yes' for check in discont):
+                        discont.append("no")
+            if all(check == "yes" for check in discont):
                 toremove.append(i)
         dsc_data = dsc_data.drop(toremove)
         # Make the layout of the plot
@@ -229,48 +236,56 @@ class DSCDataBlock(DataBlock):
             dsc_data,
             x_options=sigs,
             y_options=sigs,
-            x_default='Temperature (°C)',
-            y_default='Heat Flow (mW)',
+            x_default="Temperature (°C)",
+            y_default="Heat Flow (mW)",
             plot_points=False,
             plot_line=True,
         )
         # Add indication of direction of exothermic change
         # Position the arrow on the y axis according to the bottom of the heat flow data range
-        if exo == 'UP':
-            arrowystart = min(dsc_data['Heat Flow (mW)'])
-            arrowyend = min(dsc_data['Heat Flow (mW)'])+0.1*(max(dsc_data['Heat Flow (mW)'])-min(dsc_data['Heat Flow (mW)']))
-        elif exo == 'DOWN':
-            arrowyend = min(dsc_data['Heat Flow (mW)'])
-            arrowystart = min(dsc_data['Heat Flow (mW)'])+0.1*(max(dsc_data['Heat Flow (mW)'])-min(dsc_data['Heat Flow (mW)']))
+        if exo == "UP":
+            arrowystart = min(dsc_data["Heat Flow (mW)"])
+            arrowyend = min(dsc_data["Heat Flow (mW)"]) + 0.1 * (
+                max(dsc_data["Heat Flow (mW)"]) - min(dsc_data["Heat Flow (mW)"])
+            )
+        elif exo == "DOWN":
+            arrowyend = min(dsc_data["Heat Flow (mW)"])
+            arrowystart = min(dsc_data["Heat Flow (mW)"]) + 0.1 * (
+                max(dsc_data["Heat Flow (mW)"]) - min(dsc_data["Heat Flow (mW)"])
+            )
         else:
-            LOGGER.warning('Exothermic direction information not found in file')
+            LOGGER.warning("Exothermic direction information not found in file")
         # Determine where the arrow would be positioned on the x-axis according to what the x axis is
         arrowxpos = {}
         for sig in sigs:
             arrowxpos[sig] = min(dsc_data[sig])
         # Make the arrow
-        arrow = Arrow(x_start=arrowxpos['Temperature (°C)'],\
-                    y_start=arrowystart,
-                    x_end=arrowxpos['Temperature (°C)'],\
-                    y_end=arrowyend,
-                    end=NormalHead(size=10),\
-                    visible=True
-                    )
+        arrow = Arrow(
+            x_start=arrowxpos["Temperature (°C)"],
+            y_start=arrowystart,
+            x_end=arrowxpos["Temperature (°C)"],
+            y_end=arrowyend,
+            end=NormalHead(size=10),
+            visible=True,
+        )
         # Make a label for the arrow
-        arrowlab = Label(x=arrowxpos['Temperature (°C)'],
-                        x_offset=10,
-                        y=min(dsc_data['Heat Flow (mW)']),
-                        text='exo',
-                        visible=True)
+        arrowlab = Label(
+            x=arrowxpos["Temperature (°C)"],
+            x_offset=10,
+            y=min(dsc_data["Heat Flow (mW)"]),
+            text="exo",
+            visible=True,
+        )
         # Add the arrow and label to the figure
         plotlayout.children[1].add_layout(arrow)
         plotlayout.children[1].add_layout(arrowlab)
 
         # Make the arrow visible only if the y axis is heat flow
-        plotlayout.children[1].yaxis.js_on_change('axis_label',\
-                                                CustomJS(args=dict(arrow=arrow,\
-                                                                    arrowlab=arrowlab),\
-                                                        code = """
+        plotlayout.children[1].yaxis.js_on_change(
+            "axis_label",
+            CustomJS(
+                args=dict(arrow=arrow, arrowlab=arrowlab),
+                code="""
                                                         if (cb_obj.axis_label == 'Heat Flow (mW)') {
                                                             arrow.visible = true
                                                             arrowlab.visible = true
@@ -279,20 +294,22 @@ class DSCDataBlock(DataBlock):
                                                             arrow.visible = false
                                                             arrowlab.visible = false
                                                             }
-                                                        """
-                                                        ))
+                                                        """,
+            ),
+        )
         # Set the arrow's x axis position so that it is near the axis based on the variable plotted
-        plotlayout.children[1].xaxis.js_on_change('axis_label',\
-                                                CustomJS(args=dict(arrow=arrow,\
-                                                                    arrowlab=arrowlab,
-                                                                    arrowxpos=arrowxpos),\
-                                                        code = """
+        plotlayout.children[1].xaxis.js_on_change(
+            "axis_label",
+            CustomJS(
+                args=dict(arrow=arrow, arrowlab=arrowlab, arrowxpos=arrowxpos),
+                code="""
                                                         arrow.x_start=arrowxpos[cb_obj.axis_label]
                                                         arrow.x_end=arrowxpos[cb_obj.axis_label]
                                                         arrowlab.x=arrowxpos[cb_obj.axis_label]
-                                                        """
-                                                        ))
-                                                           
+                                                        """,
+            ),
+        )
+
         # Add a table saying what the cycles were
         longests = []
         for i in range(len(cycleinfo.columns.to_list())):
@@ -302,92 +319,135 @@ class DSCDataBlock(DataBlock):
             longests.append(max(lens))
         cycletab = DataTable(
             source=ColumnDataSource(cycleinfo),
-            columns=[TableColumn(field=cycleinfo.columns.to_list()[i],width=longests[i]*10)\
-                    for i in range(len(cycleinfo.columns.to_list()))],\
-            autosize_mode='none',\
-            height = 50+25*len(cycleinfo)
-            )
+            columns=[
+                TableColumn(field=cycleinfo.columns.to_list()[i], width=longests[i] * 10)
+                for i in range(len(cycleinfo.columns.to_list()))
+            ],
+            autosize_mode="none",
+            height=50 + 25 * len(cycleinfo),
+        )
 
         # Add checkbox for whether to show thermodynamic parameters and boxes to input them
-        inptoggle = CheckboxGroup(labels=['Show/enter thermodynamic parameters?'],active=[0]) 
+        inptoggle = CheckboxGroup(labels=["Show/enter thermodynamic parameters?"], active=[0])
 
         # Add user input options for the thermodynamic information
-        inptitle = Div(text='<p style="font-size:16px; "><b>Optional user inputs for values obtained from DSC curve analysis</b></p><br>Entering values will overwrite any already stored<br>If inputting more than one, separate with a comma<br>Enter "clear" to remove stored data for the parameter',visible=True)
+        inptitle = Div(
+            text='<p style="font-size:16px; "><b>Optional user inputs for values obtained from DSC curve analysis</b></p><br>Entering values will overwrite any already stored<br>If inputting more than one, separate with a comma<br>Enter "clear" to remove stored data for the parameter',
+            visible=True,
+        )
 
-        thermparms = ['Tg','Tm','cc','ct','cp','Hm','Hcc']
-        thermnames = ['Tg','Tm','cold_crystallisation_temp','crystallisation_temp','crystallinity_perc',\
-                'melting_enthalpy','cold_crystallisation_enthalpy']
-        thermlabs = ["Glass transition temperature(s) (°C)","Melting temperature(s) (°C)",\
-                    "Cold crystallisation temperature(s) (°C)","Crystallisation temperature(s) (°C)",\
-                    "% Crystallinity/ies","Melting enthalpy/ies (kJ/mol)",\
-                    "Cold crystallisation enthalpy/ies (kJ/mol)"]
-    
+        thermparms = ["Tg", "Tm", "cc", "ct", "cp", "Hm", "Hcc"]
+        thermnames = [
+            "Tg",
+            "Tm",
+            "cold_crystallisation_temp",
+            "crystallisation_temp",
+            "crystallinity_perc",
+            "melting_enthalpy",
+            "cold_crystallisation_enthalpy",
+        ]
+        thermlabs = [
+            "Glass transition temperature(s) (°C)",
+            "Melting temperature(s) (°C)",
+            "Cold crystallisation temperature(s) (°C)",
+            "Crystallisation temperature(s) (°C)",
+            "% Crystallinity/ies",
+            "Melting enthalpy/ies (kJ/mol)",
+            "Cold crystallisation enthalpy/ies (kJ/mol)",
+        ]
+
         # Set up the boxes to enter the thermodynamic parameters with currently stored values under them
         inps = []
         texts = []
         shows = []
         titles = []
         for i in range(len(thermparms)):
-            inps.append(TextInput(value = "",title = thermlabs[i],visible=True))
-            if '{0}_list'.format(thermnames[i]) in self.data:
-                textlist = self.data['{0}_list'.format(thermnames[i])]
+            inps.append(TextInput(value="", title=thermlabs[i], visible=True))
+            if f"{thermnames[i]}_list" in self.data:
+                textlist = self.data[f"{thermnames[i]}_list"]
                 for j in range(len(textlist)):
                     textlist[j] = str(textlist[j])
-                texts.append(', '.join(textlist))
+                texts.append(", ".join(textlist))
                 if len(texts[i]) == 0:
-                    texts[i] = 'None currently stored (empty list in database)'
+                    texts[i] = "None currently stored (empty list in database)"
             else:
-                texts.append('None currently stored')
-            shows.append(Div(text = texts[i],style={'font-size':'16px'},visible=True))
-            titles.append(Div(text = '<p style="font-size:14px; "><b>Current stored value(s)</b></p>',visible=True))
+                texts.append("None currently stored")
+            shows.append(Div(text=texts[i], style={"font-size": "16px"}, visible=True))
+            titles.append(
+                Div(
+                    text='<p style="font-size:14px; "><b>Current stored value(s)</b></p>',
+                    visible=True,
+                )
+            )
 
         # Update values on pressing enter when text is input - link to the display
         for i in range(len(thermparms)):
-            inps[i].js_link('value',shows[i],'text')
-            shows[i].js_on_change('text',*[CustomJS(code=generate_js_callback_single_float_parameter("set_{0}".format(thermparms[i]),thermparms[i],self.block_id,throttled=False))])
+            inps[i].js_link("value", shows[i], "text")
+            shows[i].js_on_change(
+                "text",
+                *[
+                    CustomJS(
+                        code=generate_js_callback_single_float_parameter(
+                            f"set_{thermparms[i]}",
+                            thermparms[i],
+                            self.block_id,
+                            throttled=False,
+                        )
+                    )
+                ],
+            )
 
         # Toggle whether the thermodynamic parameter info will be visible based on the checkbox
-        inptoggle.js_on_click(CustomJS(args=dict(inptitle=inptitle,inps=inps,shows=shows,titles=titles),\
-                code = """
+        inptoggle.js_on_click(
+            CustomJS(
+                args=dict(inptitle=inptitle, inps=inps, shows=shows, titles=titles),
+                code="""
                 inptitle.visible = cb_obj.active.includes(0)
                 for (let inpcount = 0; inpcount < inps.length; inpcount++) {
                     inps[inpcount].visible = cb_obj.active.includes(0)
                     }
                 for (let showcount = 0; showcount < shows.length; showcount++) {
-                    shows[showcount].visible = cb_obj.active.includes(0) 
+                    shows[showcount].visible = cb_obj.active.includes(0)
                     }
                 for (let titlecount = 0; titlecount < titles.length; titlecount++) {
                     titles[titlecount].visible = cb_obj.active.includes(0)
                     }
-                """)
-                )
-       
-        Tgcurrent = column(children = [titles[0],shows[0]])
-        Tglayout = row(children = [inps[0],Tgcurrent])
-        Tmcurrent = column(children = [titles[1],shows[1]])
-        Tmlayout = row(children = [inps[1],Tmcurrent])
-        cccurrent = column(children = [titles[2],shows[2]])
-        cclayout = row(children = [inps[2],cccurrent])
-        ctcurrent = column(children = [titles[3],shows[3]])
-        ctlayout = row(children = [inps[3],ctcurrent])
-        cpcurrent = column(children = [titles[4],shows[4]])
-        cplayout = row(children = [inps[4],cpcurrent])
-        Hmcurrent = column(children = [titles[5],shows[5]])
-        Hmlayout = row(children = [inps[5],Hmcurrent])
-        Hcccurrent = column(children = [titles[6],shows[6]])
-        Hcclayout = row(children = [inps[6],Hcccurrent])
+                """,
+            )
+        )
+
+        Tgcurrent = column(children=[titles[0], shows[0]])
+        Tglayout = row(children=[inps[0], Tgcurrent])
+        Tmcurrent = column(children=[titles[1], shows[1]])
+        Tmlayout = row(children=[inps[1], Tmcurrent])
+        cccurrent = column(children=[titles[2], shows[2]])
+        cclayout = row(children=[inps[2], cccurrent])
+        ctcurrent = column(children=[titles[3], shows[3]])
+        ctlayout = row(children=[inps[3], ctcurrent])
+        cpcurrent = column(children=[titles[4], shows[4]])
+        cplayout = row(children=[inps[4], cpcurrent])
+        Hmcurrent = column(children=[titles[5], shows[5]])
+        Hmlayout = row(children=[inps[5], Hmcurrent])
+        Hcccurrent = column(children=[titles[6], shows[6]])
+        Hcclayout = row(children=[inps[6], Hcccurrent])
 
         # Put the items together in a bokeh layout
         fulllayout = column(
-                children = [
-                    plotlayout,
-                    cycletab,
-                    inptoggle,
-                    inptitle,
-                    Tglayout,Tmlayout,cclayout,ctlayout,cplayout,Hmlayout,Hcclayout
-                    ],
-                sizing_mode='stretch_width'
-                )
+            children=[
+                plotlayout,
+                cycletab,
+                inptoggle,
+                inptitle,
+                Tglayout,
+                Tmlayout,
+                cclayout,
+                ctlayout,
+                cplayout,
+                Hmlayout,
+                Hcclayout,
+            ],
+            sizing_mode="stretch_width",
+        )
         return fulllayout
 
     def generate_dsc_plot(self):
@@ -407,9 +467,9 @@ class DSCDataBlock(DataBlock):
                     ext,
                 )
                 return
-            
-            dsc_data,signals,cycles,exo = self.parse_dsc_sheet(Path(file_info["location"]))
-        
+
+            dsc_data, signals, cycles, exo = self.parse_dsc_sheet(Path(file_info["location"]))
+
         if dsc_data is not None:
-            layout = self._format_dsc_plot(dsc_data,signals,cycles,exo)
+            layout = self._format_dsc_plot(dsc_data, signals, cycles, exo)
             self.data["bokeh_plot_data"] = bokeh.embed.json_item(layout, theme=DATALAB_BOKEH_THEME)
